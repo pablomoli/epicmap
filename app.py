@@ -6,16 +6,18 @@ from dotenv import load_dotenv
 import os
 from shapely.geometry import Point
 import geopandas as gpd
+from flask_migrate import Migrate
 
 # Load environment variables
 load_dotenv()
 
 # Flask app setup
 app = Flask(__name__)
-db_path = os.getenv("DB_PATH", "sqlite:///jobs.db")
+db_path = os.getenv("DATABASE_URL", "sqlite:///jobs.db")
 app.config['SQLALCHEMY_DATABASE_URI'] = db_path
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
 # Load county polygons
 geojson_path = os.path.join("static", "data", "florida_counties.geojson")
