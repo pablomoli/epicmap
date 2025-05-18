@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Survey Job Map</title>
+
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="/static/css/style.css" />
+
+    <!-- Leaflet Core -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+
+    <!-- MarkerCluster Styles -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
+    />
+  </head>
+
+  <body>
+    <h1>Survey Job Map</h1>
+
+    <!-- Filter Form -->
+    <form id="filterForm">
+      <label for="crew">Crew:</label>
+      <input type="text" id="crew" name="crew" />
+
+      <label for="client">Client:</label>
+      <input type="text" id="client" name="client" />
+
+      <label for="start_date">From:</label>
+      <input type="date" id="start_date" name="start_date" />
+
+      <label for="end_date">To:</label>
+      <input type="date" id="end_date" name="end_date" />
+
+      <button type="submit">Apply Filters</button>
+      <button type="button" onclick="clearFilters()">Reset</button>
+    </form>
+
+    <!-- Search Form -->
+    <form id="searchForm" style="margin-bottom: 1rem">
+      <label for="search">Search Address:</label>
+      <input
+        type="text"
+        id="search"
+        placeholder="123 Main St, Orlando FL"
+        style="width: 300px"
+      />
+      <button type="submit">Go</button>
+    </form>
+
+    <!-- Map Layout -->
+    <div id="main-container">
+      <div id="info-panel">
+        <button id="close-panel">×</button>
+        <h2>Job Details</h2>
+        <div id="info-content">Click a job marker to view details.</div>
+      </div>
+      <div id="map"></div>
+    </div>
+
+    <p><a href="/">Back to Form</a></p>
+
+    <!-- Scripts: Proper Order -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
+    <script src="/static/js/map.js"></script>
+  </body>
+</html>

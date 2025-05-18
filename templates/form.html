@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Enter New Job</title>
+    <link rel="stylesheet" href="/static/css/style.css" />
+  </head>
+  <body>
+    <h1>Survey Job Entry</h1>
+    <form method="POST">
+      <label for="job_number">Job Number:</label><br />
+      <input
+        type="text"
+        id="job_number"
+        name="job_number"
+        required
+      /><br /><br />
+
+      <label for="crew">Crew:</label><br />
+      <input type="text" id="crew" name="crew" required /><br /><br />
+
+      <label for="address">Address:</label><br />
+      <input type="text" id="address" name="address" required /><br /><br />
+
+      <label for="client">Client:</label><br />
+      <input type="text" id="client" name="client" required /><br /><br />
+
+      <label for="date">Date of Field Work:</label><br />
+      <input type="date" id="date" name="date" required /><br /><br />
+
+      <input type="submit" value="Submit Job" />
+    </form>
+    {% if error %}
+    <div style="color: red; margin-top: 1rem">⚠ {{ error }}</div>
+    {% endif %}
+
+    <p><a href="/map">Go to Map View</a></p>
+  </body>
+</html>

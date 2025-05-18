@@ -1,0 +1,58 @@
+body {
+  font-family: sans-serif;
+  margin: 0;
+  background-color: #f9f9f9;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+h1 {
+  margin-bottom: 1rem;
+  padding: 1rem;
+}
+
+form {
+  background: #fff;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
+  margin: 0 1rem;
+}
+
+a {
+  display: inline-block;
+  margin: 1rem;
+}
+
+#main-container {
+  display: flex;
+  flex: 1;
+  height: 100%;
+}
+
+#info-panel {
+  width: 300px;
+  padding: 1rem;
+  background-color: #fff;
+  overflow-y: auto;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  display: none;
+}
+
+#info-panel.visible {
+  display: block;
+}
+
+#map {
+  flex-grow: 1;
+  height: 100%;
+}
+.county-label {
+  font-size: 14px;
+  font-weight: bold;
+  color: #f4f4f4;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
+}
