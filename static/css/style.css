@@ -1,22 +1,24 @@
 body {
-  font-family: sans-serif;
+  font-family: "Segoe UI", sans-serif;
   margin: 0;
-  background-color: #f9f9f9;
+  background-color: #eaeaea;
+  color: #222;
   height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
 h1 {
-  margin-bottom: 1rem;
-  padding: 1rem;
+  margin: 0;
+  padding: 0.75rem 1rem 0 1rem;
+  color: #333;
 }
 
 form {
-  background: #fff;
+  background: #f4f4f4;
   padding: 1rem;
   border-radius: 8px;
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.08);
   margin: 0 1rem;
 }
 
@@ -34,9 +36,9 @@ a {
 #info-panel {
   width: 300px;
   padding: 1rem;
-  background-color: #fff;
+  background-color: #f4f4f4;
   overflow-y: auto;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.08);
   display: none;
 }
 
@@ -48,11 +50,75 @@ a {
   flex-grow: 1;
   height: 100%;
 }
+
 .county-label {
   font-size: 14px;
   font-weight: bold;
-  color: #f4f4f4;
+  color: #fff;
   text-align: center;
   white-space: nowrap;
   pointer-events: none;
+}
+
+.custom-marker {
+  text-align: center;
+  line-height: 1;
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+  background-color: #eaeaea;
+  flex-wrap: wrap;
+  border-bottom: 1px solid #ccc;
+}
+
+.top-bar form {
+  margin: 0;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.top-bar input {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.9rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #fff;
+  color: #333;
+}
+
+.top-bar form + form {
+  margin-left: 1rem;
+}
+
+.newjob {
+  background-color: #4a90e2;
+  color: white;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.2s ease;
+  white-space: nowrap;
+}
+
+.newjob:hover {
+  background-color: #357ab8;
+}
+
+.form-title {
+  display: block;
+  font-weight: bold;
+  font-size: 0.95rem;
+  margin-bottom: 0.25rem;
 }

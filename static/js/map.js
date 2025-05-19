@@ -1,3 +1,40 @@
+function refreshSidebarJob(jobNumber) {
+  fetch(`/jobs?job_number=${jobNumber}`)
+    .then((res) => res.json())
+    .then((data) => {
+      const updatedJob = data[0];
+      if (updatedJob) {
+        Object.assign(
+          window.lastFetchedJobs.find((j) => j.JobNumber === jobNumber),
+          updatedJob,
+        );
+        showJobDetails(updatedJob);
+      }
+    });
+}
+
+const statusIcons = {
+  "On Hold/Pending": "gray",
+  "Needs Fieldwork": "gold",
+  "Fieldwork Complete/Needs Office Work": "purple",
+  "To Be Printed/Packaged": "dodgerblue",
+  "Survey Complete/Invoice Sent/Unpaid": "yellow",
+  "Set/Flag Pins": "red",
+  "Completed/To Be Filed": "yellowgreen",
+  "Ongoing Site Plan": "pink",
+};
+function getStatusIcon(status) {
+  const color = statusIcons[status] || "blue";
+  return new L.Icon({
+    iconUrl: `/static/icons/marker-icon-${color}.png`,
+    shadowUrl: "/static/icons/marker-shadow.png",
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41],
+  });
+}
+
 // ==========================
 // 🌐 Base & Overlay Layers
 // ==========================
@@ -21,9 +58,9 @@ const countiesLayer = L.geoJSON(null, {
 });
 
 const countyLabelsLayer = L.layerGroup();
-window.lastFetchedJobs = []; // add this at top
+window.lastFetchedJobs = [];
+let selectedJobNumber = null;
 
-// Fetch and add counties + labels
 fetch("/static/data/florida_counties.geojson")
   .then((res) => res.json())
   .then((data) => {
@@ -48,9 +85,6 @@ fetch("/static/data/florida_counties.geojson")
   })
   .catch((err) => console.error("County load failed:", err));
 
-// ==========================
-// 🗺️ Map Initialization
-// ==========================
 let map = L.map("map", {
   center: [28.5383, -81.3792],
   zoom: 9,
@@ -63,10 +97,6 @@ L.control
   })
   .addTo(map);
 
-// ==========================
-// 📍 Marker + Side Panel
-// ==========================
-let markers = [];
 function editJob(jobNumber) {
   const job = window.lastFetchedJobs.find((j) => j.JobNumber === jobNumber);
   if (!job) return;
@@ -75,66 +105,186 @@ function editJob(jobNumber) {
   content.innerHTML = `
     <h3>Edit Job #${job.JobNumber}</h3>
     <form id="edit-form">
-      <label>Crew: <input name="crew" value="${job.Crew}" /></label><br />
-      <label>Client: <input name="client" value="${job.Client}" /></label><br />
-      <label>Address: <input name="address" value="${job.Address}" /></label><br />
-      <label>Date: <input name="date" type="date" value="${job.Date.slice(0, 10)}" /></label><br />
+      <label>Client: <input name="client" value="${job.Client || ""}" /></label><br />
+      <label>Address: <input name="address" value="${job.Address || ""}" /></label><br />
+      <label>Status:
+  <select name="status">
+    ${Object.keys(statusIcons)
+      .map(
+        (status) =>
+          `<option value="${status}" ${
+            job.Status === status ? "selected" : ""
+          }>${status}</option>`,
+      )
+      .join("")}
+  </select>
+</label><br />
+
       <button type="submit">Save</button>
-      <button type="button" onclick="fetchJobs()">Cancel</button>
+      <button type="button" id="cancel-edit">Cancel</button>
     </form>
   `;
 
   document.getElementById("edit-form").addEventListener("submit", function (e) {
     e.preventDefault();
 
-    const updated = {
-      crew: this.crew.value,
-      client: this.client.value,
-      address: this.address.value,
-      date: this.date.value,
-    };
+    const form = this;
+    const updated = {};
+    if (form.client.value.trim()) updated.client = form.client.value.trim();
+    if (form.status.value.trim()) updated.status = form.status.value.trim();
 
-    fetch(`/jobs/${job.JobNumber}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updated),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.error) {
-          alert(data.error); // Or render it in the sidebar if you prefer
-          return;
-        }
-        alert("Job updated!");
-        fetchJobs();
-        document.getElementById("info-panel").classList.remove("visible");
-      });
+    const newAddress = form.address.value.trim();
+    const oldAddress = job.Address || job.address;
+
+    if (newAddress && newAddress !== oldAddress) {
+      updated.address = newAddress;
+
+      fetch(`/geocode?address=${encodeURIComponent(newAddress)}`)
+        .then((res) => res.json())
+        .then((geo) => {
+          if (!geo.lat || !geo.lon) {
+            alert("Geocoding failed. Address not updated.");
+            return;
+          }
+
+          updated.address = geo.formatted_address;
+          updated.latitude = geo.lat;
+          updated.longitude = geo.lon;
+          updated.county = geo.county;
+
+          submitUpdate(updated);
+        })
+        .catch((err) => {
+          console.error("Geocode error:", err);
+          alert("Could not geocode address.");
+        });
+    } else {
+      submitUpdate(updated);
+    }
+  });
+
+  document.getElementById("cancel-edit").addEventListener("click", () => {
+    document.getElementById("info-panel").classList.remove("visible");
   });
 }
 
+function submitUpdate(updated) {
+  fetch(`/jobs/${selectedJobNumber}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(updated),
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      if (data.error) {
+        alert(data.error);
+        return;
+      }
+      alert("Job updated!");
+      fetchJobs();
+      Object.assign(
+        window.lastFetchedJobs.find((j) => j.JobNumber === selectedJobNumber),
+        data,
+      );
+      showJobDetails(data);
+    });
+}
+
 function showJobDetails(job) {
+  selectedJobNumber = job.JobNumber;
+  document.getElementById("visited-count").textContent = job.Visited || 0;
+  document.getElementById("total-time-spent").textContent = Number(
+    job.TotalTimeSpent || 0,
+  ).toFixed(2);
+
   const panel = document.getElementById("info-panel");
   const content = document.getElementById("info-content");
+
   content.innerHTML = `
-  <h3>Job #${job.JobNumber}</h3>
-  <p><strong>Client:</strong> ${job.Client}</p>
-  <p><strong>Address:</strong> ${job.Address}</p>
-  <p><strong>Crew:</strong> ${job.Crew}</p>
-  <p><strong>Date:</strong> ${new Date(job.Date).toLocaleDateString()}</p>
-  ${job.County ? `<p><strong>County:</strong> ${job.County}</p>` : ""}
-  ${job.PropertyLink ? `<p><a href="${job.PropertyLink}" target="_blank">View Property Appraiser</a></p>` : ""}
-  <button onclick="editJob('${job.JobNumber}')">Edit Job</button>
-`;
+    <h3>Job #${job.JobNumber}</h3>
+    <p><strong>Client:</strong> ${job.Client}</p>
+    <p><strong>Address:</strong> ${job.Address}</p>
+    <p><strong>Status:</strong> ${job.Status || ""}</p>
+    ${job.County ? `<p><strong>County:</strong> ${job.County}</p>` : ""}
+    ${job.PropertyLink ? `<p><a href="${job.PropertyLink}" target="_blank">View Property Appraiser</a></p>` : ""}
+    <button onclick="editJob('${job.JobNumber}')">Edit Job</button>
+  `;
+  fetch(`/jobs/${job.JobNumber}/fieldwork`)
+    .then((res) => res.json())
+    .then((entries) => {
+      const list = document.getElementById("fieldwork-list");
+      if (!entries.length) {
+        list.innerHTML = "<li>No entries yet.</li>";
+        return;
+      }
+      list.innerHTML = entries
+        .map(
+          (entry) => `
+      <li id="fieldwork-entry-${entry.id}">
+        ${entry.work_date} | ${entry.start_time}–${entry.end_time}
+        ${entry.crew ? ` | Crew: ${entry.crew}` : ""}
+        ${entry.drone_card ? ` | Drone: ${entry.drone_card}` : ""}
+        <button onclick="toggleEditFieldwork(${entry.id})">✏️ Edit</button>
+        <div id="fieldwork-edit-${entry.id}" style="display:none;">
+          <form onsubmit="submitFieldworkEdit(event, ${entry.id})">
+            <input type="date" name="work_date" value="${entry.work_date}" required />
+            <input type="time" name="start_time" value="${entry.start_time}" required />
+            <input type="time" name="end_time" value="${entry.end_time}" required />
+            <input type="text" name="crew" placeholder="Crew" value="${entry.crew || ""}" />
+            <input type="text" name="drone_card" placeholder="Drone Card" value="${entry.drone_card || ""}" />
+            <button type="submit">Save</button>
+          </form>
+        </div>
+      </li>
+    `,
+        )
+        .join("");
+    });
+
   panel.classList.add("visible");
+}
+function toggleFieldWorkForm() {
+  const form = document.getElementById("fieldwork-form");
+  form.style.display = form.style.display === "none" ? "block" : "none";
+}
+
+function toggleEditFieldwork(id) {
+  const el = document.getElementById(`fieldwork-edit-${id}`);
+  el.style.display = el.style.display === "none" ? "block" : "none";
+}
+
+function submitFieldworkEdit(event, id) {
+  event.preventDefault();
+  const form = event.target;
+
+  const updated = {
+    work_date: form.work_date.value,
+    start_time: form.start_time.value,
+    end_time: form.end_time.value,
+    crew: form.crew.value,
+    drone_card: form.drone_card.value,
+  };
+
+  fetch(`/fieldwork/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(updated),
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      alert("Field work updated.");
+      refreshSidebarJob(data.job_number);
+    })
+    .catch((err) => {
+      console.error("Update failed", err);
+      alert("Failed to update field work.");
+    });
 }
 
 document.getElementById("close-panel").addEventListener("click", () => {
   document.getElementById("info-panel").classList.remove("visible");
 });
 
-// ==========================
-// 🚚 Load Jobs (With Filters)
-// ==========================
 function fetchJobs(params = {}) {
   if (window.markerCluster) {
     map.removeLayer(window.markerCluster);
@@ -144,37 +294,29 @@ function fetchJobs(params = {}) {
   fetch(`/jobs?${query}`)
     .then((res) => res.json())
     .then((data) => {
-      console.log("Fetched jobs:", data); // ✅ Check this in browser dev tools
+      console.log("Fetched jobs:", data);
       window.lastFetchedJobs = data;
       const cluster = L.markerClusterGroup();
       data.forEach((job) => {
         if (job.Latitude && job.Longitude) {
-          console.log(
-            "Adding marker:",
-            job.JobNumber,
-            job.Latitude,
-            job.Longitude,
-          ); // ✅ Log per marker
-          const marker = L.marker([job.Latitude, job.Longitude]);
+          const marker = L.marker([job.Latitude, job.Longitude], {
+            icon: getStatusIcon(job.Status),
+          });
           marker.on("click", () => showJobDetails(job));
           cluster.addLayer(marker);
         }
       });
-      map.addLayer(cluster); // ✅ required to display markers
+      window.markerCluster = cluster;
+      map.addLayer(cluster);
     });
 }
 
-// ==========================
-// 🎯 Filter Form
-// ==========================
 document.getElementById("filterForm").addEventListener("submit", function (e) {
   e.preventDefault();
-  const crew = document.getElementById("crew").value;
   const client = document.getElementById("client").value;
-  const start_date = document.getElementById("start_date").value;
-  const end_date = document.getElementById("end_date").value;
-
-  fetchJobs({ crew, client, start_date, end_date });
+  const job_number = document.getElementById("job_number").value;
+  console.log({ client, job_number });
+  fetchJobs({ client, job_number });
 });
 
 function clearFilters() {
@@ -182,9 +324,6 @@ function clearFilters() {
   fetchJobs();
 }
 
-// ==========================
-// 🔍 Address Search Form
-// ==========================
 let searchMarker = null;
 
 document.getElementById("searchForm").addEventListener("submit", function (e) {
@@ -214,7 +353,42 @@ document.getElementById("searchForm").addEventListener("submit", function (e) {
     });
 });
 
-// ==========================
-// 🚀 Initial Load
-// ==========================
+document
+  .getElementById("new-fieldwork")
+  .addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!selectedJobNumber) {
+      alert("Select a job first.");
+      return;
+    }
+
+    const formData = new FormData(e.target);
+    const payload = Object.fromEntries(formData.entries());
+
+    try {
+      const res = await fetch(`/jobs/${selectedJobNumber}/fieldwork`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await res.json();
+      if (res.ok) {
+        alert("Field work added!");
+
+        // Refetch the latest job info and show the sidebar again
+        refreshSidebarJob(selectedJobNumber);
+
+        e.target.reset();
+      } else {
+        alert(result.error || "Failed to save field work.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Server error.");
+    }
+  });
+
 fetchJobs();

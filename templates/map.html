@@ -25,37 +25,37 @@
   </head>
 
   <body>
-    <h1>Survey Job Map</h1>
+    <h1>Epic Map</h1>
+    <div class="top-bar">
+      <!-- Filter Form -->
+      <div class="form-group">
+        <h3>Filter Existing Jobs</h3>
+        <form id="filterForm">
+          <label>Job #:</label>
+          <input type="text" id="job_number" name="job_number" />
+          <label>Client/Buyer:</label>
+          <input type="text" id="client" name="client" />
+          <button type="submit">Apply Filters</button>
+          <button type="button" onclick="clearFilters()">Reset</button>
+        </form>
+      </div>
 
-    <!-- Filter Form -->
-    <form id="filterForm">
-      <label for="crew">Crew:</label>
-      <input type="text" id="crew" name="crew" />
-
-      <label for="client">Client:</label>
-      <input type="text" id="client" name="client" />
-
-      <label for="start_date">From:</label>
-      <input type="date" id="start_date" name="start_date" />
-
-      <label for="end_date">To:</label>
-      <input type="date" id="end_date" name="end_date" />
-
-      <button type="submit">Apply Filters</button>
-      <button type="button" onclick="clearFilters()">Reset</button>
-    </form>
-
-    <!-- Search Form -->
-    <form id="searchForm" style="margin-bottom: 1rem">
-      <label for="search">Search Address:</label>
-      <input
-        type="text"
-        id="search"
-        placeholder="123 Main St, Orlando FL"
-        style="width: 300px"
-      />
-      <button type="submit">Go</button>
-    </form>
+      <!-- Search Form -->
+      <div class="form-group">
+        <form id="searchForm">
+          <h3>Scout a Potential Job</h3>
+          <label>Search Address:</label>
+          <input
+            type="text"
+            id="search"
+            placeholder="123 Main St, Orlando FL"
+            style="width: 240px"
+          />
+          <button type="submit">Go</button>
+        </form>
+      </div>
+      <a class="newjob" href="/">Add New Job</a>
+    </div>
 
     <!-- Map Layout -->
     <div id="main-container">
@@ -63,11 +63,34 @@
         <button id="close-panel">×</button>
         <h2>Job Details</h2>
         <div id="info-content">Click a job marker to view details.</div>
+        <div id="fieldwork-form">
+          <h4>Add Field Work</h4>
+          <form id="new-fieldwork">
+            <label>Date: <input type="date" name="work_date" required /></label
+            ><br />
+            <label
+              >Start: <input type="time" name="start_time" required /></label
+            ><br />
+            <label>End: <input type="time" name="end_time" required /></label
+            ><br />
+            <label>Crew: <input type="text" name="crew" /></label><br />
+            <label>Drone Card: <input type="text" name="drone_card" /></label
+            ><br />
+            <button type="submit">Save Field Work</button>
+          </form>
+          <h4>Past Field Work</h4>
+          <ul id="fieldwork-list">
+            <em>Loading...</em>
+          </ul>
+        </div>
+        <p><strong>Visited:</strong> <span id="visited-count">0</span></p>
+        <p>
+          <strong>Total Time Spent:</strong>
+          <span id="total-time-spent">0.00</span> hrs
+        </p>
       </div>
       <div id="map"></div>
     </div>
-
-    <p><a href="/">Back to Form</a></p>
 
     <!-- Scripts: Proper Order -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

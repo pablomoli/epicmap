@@ -2,38 +2,32 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Enter New Job</title>
+    <title>Create Job</title>
     <link rel="stylesheet" href="/static/css/style.css" />
   </head>
   <body>
-    <h1>Survey Job Entry</h1>
+    <h1>Create New Job</h1>
     <form method="POST">
-      <label for="job_number">Job Number:</label><br />
-      <input
-        type="text"
-        id="job_number"
-        name="job_number"
-        required
-      /><br /><br />
+      <label>Job Number:</label><br />
+      <input type="text" name="job_number" required /><br /><br />
 
-      <label for="crew">Crew:</label><br />
-      <input type="text" id="crew" name="crew" required /><br /><br />
+      <label>Address:</label><br />
+      <input type="text" name="address" required /><br /><br />
 
-      <label for="address">Address:</label><br />
-      <input type="text" id="address" name="address" required /><br /><br />
+      <label>Client:</label><br />
+      <input type="text" name="client" required /><br /><br />
 
-      <label for="client">Client:</label><br />
-      <input type="text" id="client" name="client" required /><br /><br />
+      <label>Status (optional):</label><br />
+      <input type="text" name="status" /><br /><br />
 
-      <label for="date">Date of Field Work:</label><br />
-      <input type="date" id="date" name="date" required /><br /><br />
-
-      <input type="submit" value="Submit Job" />
+      <input type="submit" value="Create Job" />
     </form>
+
     {% if error %}
-    <div style="color: red; margin-top: 1rem">⚠ {{ error }}</div>
+    <p style="color: red;">⚠ {{ error }}</p>
     {% endif %}
 
-    <p><a href="/map">Go to Map View</a></p>
+    <p><a href="/map">View Map</a></p>
   </body>
 </html>
+
