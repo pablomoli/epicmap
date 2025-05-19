@@ -14,13 +14,13 @@ function refreshSidebarJob(jobNumber) {
 }
 
 const statusIcons = {
-  "On Hold/Pending": "gray",
-  "Needs Fieldwork": "gold",
-  "Fieldwork Complete/Needs Office Work": "purple",
-  "To Be Printed/Packaged": "dodgerblue",
+  "On Hold/Pending": "grey",
+  "Needs Fieldwork": "orange",
+  "Fieldwork Complete/Needs Office Work": "violet",
+  "To Be Printed/Packaged": "blue",
   "Survey Complete/Invoice Sent/Unpaid": "yellow",
   "Set/Flag Pins": "red",
-  "Completed/To Be Filed": "yellowgreen",
+  "Completed/To Be Filed": "green",
   "Ongoing Site Plan": "pink",
 };
 function getStatusIcon(status) {
