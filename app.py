@@ -90,6 +90,9 @@ def jobs():
     client = request.args.get("client")
     if client:
         query = query.filter(Job.client.ilike(f"%{client}%"))
+    status = request.args.get("status")
+    if status:
+        query = query.filter(Job.status == status)
 
     jobs = query.all()
     return jsonify([job.to_dict() for job in jobs])

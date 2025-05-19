@@ -1,3 +1,6 @@
+const INITIAL_CENTER = [28.5383, -81];
+const INITIAL_ZOOM = 10;
+
 function refreshSidebarJob(jobNumber) {
   fetch(`/jobs?job_number=${jobNumber}`)
     .then((res) => res.json())
@@ -86,8 +89,8 @@ fetch("/static/data/florida_counties.geojson")
   .catch((err) => console.error("County load failed:", err));
 
 let map = L.map("map", {
-  center: [28.5383, -81.3792],
-  zoom: 9,
+  center: INITIAL_CENTER,
+  zoom: INITIAL_ZOOM,
   layers: [baseMaps["Esri Satellite"]],
 });
 
@@ -103,31 +106,31 @@ function editJob(jobNumber) {
 
   const content = document.getElementById("info-content");
   content.innerHTML = `
-    <h3>Edit Job #${job.JobNumber}</h3>
-    <form id="edit-form">
-      <label>Client: <input name="client" value="${job.Client || ""}" /></label><br />
-      <label>Address: <input name="address" value="${job.Address || ""}" /></label><br />
-      <label>Status:
-  <select name="status">
-    ${Object.keys(statusIcons)
-      .map(
-        (status) =>
-          `<option value="${status}" ${
-            job.Status === status ? "selected" : ""
-          }>${status}</option>`,
-      )
-      .join("")}
-  </select>
-</label><br />
-
-      <button type="submit">Save</button>
-      <button type="button" id="cancel-edit">Cancel</button>
-    </form>
+    <div id="job-edit-form">
+      <h3>Edit Job #${job.JobNumber}</h3>
+      <form id="edit-form">
+        <label>Client: <input name="client" value="${job.Client || ""}" /></label><br />
+        <label>Address: <input name="address" value="${job.Address || ""}" /></label><br />
+        <label>Status:
+          <select name="status">
+            ${Object.keys(statusIcons)
+              .map(
+                (status) =>
+                  `<option value="${status}" ${
+                    status === job.Status ? "selected" : ""
+                  }>${status}</option>`,
+              )
+              .join("")}
+          </select>
+        </label><br />
+        <button type="submit">Save</button>
+        <button type="button" id="cancel-edit">Cancel</button>
+      </form>
+    </div>
   `;
 
   document.getElementById("edit-form").addEventListener("submit", function (e) {
     e.preventDefault();
-
     const form = this;
     const updated = {};
     if (form.client.value.trim()) updated.client = form.client.value.trim();
@@ -138,7 +141,6 @@ function editJob(jobNumber) {
 
     if (newAddress && newAddress !== oldAddress) {
       updated.address = newAddress;
-
       fetch(`/geocode?address=${encodeURIComponent(newAddress)}`)
         .then((res) => res.json())
         .then((geo) => {
@@ -146,12 +148,10 @@ function editJob(jobNumber) {
             alert("Geocoding failed. Address not updated.");
             return;
           }
-
           updated.address = geo.formatted_address;
           updated.latitude = geo.lat;
           updated.longitude = geo.lon;
           updated.county = geo.county;
-
           submitUpdate(updated);
         })
         .catch((err) => {
@@ -163,8 +163,9 @@ function editJob(jobNumber) {
     }
   });
 
+  // ✅ NEW: Cancel just restores the job details view
   document.getElementById("cancel-edit").addEventListener("click", () => {
-    document.getElementById("info-panel").classList.remove("visible");
+    showJobDetails(job);
   });
 }
 
@@ -315,8 +316,9 @@ document.getElementById("filterForm").addEventListener("submit", function (e) {
   e.preventDefault();
   const client = document.getElementById("client").value;
   const job_number = document.getElementById("job_number").value;
+  const status = document.getElementById("status").value;
   console.log({ client, job_number });
-  fetchJobs({ client, job_number });
+  fetchJobs({ client, job_number, status });
 });
 
 function clearFilters() {
@@ -390,5 +392,8 @@ document
       alert("Server error.");
     }
   });
+document.getElementById("reset-map").addEventListener("click", () => {
+  map.setView(INITIAL_CENTER, INITIAL_ZOOM);
+});
 
 fetchJobs();

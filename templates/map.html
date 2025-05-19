@@ -27,34 +27,69 @@
   <body>
     <h1>Epic Map</h1>
     <div class="top-bar">
-      <!-- Filter Form -->
-      <div class="form-group">
+      <!-- Filter Column -->
+      <div class="filter-column">
         <h3>Filter Existing Jobs</h3>
         <form id="filterForm">
-          <label>Job #:</label>
-          <input type="text" id="job_number" name="job_number" />
-          <label>Client/Buyer:</label>
-          <input type="text" id="client" name="client" />
-          <button type="submit">Apply Filters</button>
-          <button type="button" onclick="clearFilters()">Reset</button>
-        </form>
-      </div>
+          <div class="filter-row">
+            <div>
+              <label for="job_number">Job #:</label>
+              <input type="text" id="job_number" name="job_number" />
+            </div>
 
-      <!-- Search Form -->
-      <div class="form-group">
-        <form id="searchForm">
-          <h3>Scout a Potential Job</h3>
-          <label>Search Address:</label>
-          <input
-            type="text"
-            id="search"
-            placeholder="123 Main St, Orlando FL"
-            style="width: 240px"
-          />
-          <button type="submit">Go</button>
+            <div>
+              <label for="client">Client/Buyer:</label>
+              <input type="text" id="client" name="client" />
+            </div>
+          </div>
+
+          <div class="filter-row">
+            <div>
+              <label for="status">Status:</label>
+              <select id="status" name="status">
+                <option value="">-- All --</option>
+                <option value="On Hold/Pending">On Hold/Pending</option>
+                <option value="Needs Fieldwork">Needs Fieldwork</option>
+                <option value="Fieldwork Complete/Needs Office Work">
+                  Fieldwork Complete/Needs Office Work
+                </option>
+                <option value="To Be Printed/Packaged">
+                  To Be Printed/Packaged
+                </option>
+                <option value="Survey Complete/Invoice Sent/Unpaid">
+                  Survey Complete/Invoice Sent/Unpaid
+                </option>
+                <option value="Set/Flag Pins">Set/Flag Pins</option>
+                <option value="Completed/To Be Filed">
+                  Completed/To Be Filed
+                </option>
+                <option value="Ongoing Site Plan">Ongoing Site Plan</option>
+              </select>
+            </div>
+
+            <div>
+              <button type="submit">Apply Filters</button>
+              <button type="button" onclick="clearFilters()">Reset</button>
+            </div>
+          </div>
         </form>
       </div>
-      <a class="newjob" href="/">Add New Job</a>
+      <!-- Search Column -->
+      <div class="search-column">
+        <h3>Scout a Potential Job</h3>
+        <form id="searchForm">
+          <div>
+            <label for="search">Search Address:</label>
+            <input
+              type="text"
+              id="search"
+              placeholder="123 Main St, Orlando FL"
+            />
+            <button type="submit">Go</button>
+          </div>
+        </form>
+        <a class="newjob" href="/">Add New Job</a>
+      </div>
     </div>
 
     <!-- Map Layout -->
@@ -89,7 +124,9 @@
           <span id="total-time-spent">0.00</span> hrs
         </p>
       </div>
+
       <div id="map"></div>
+      <button id="reset-map"></button>
     </div>
 
     <!-- Scripts: Proper Order -->
