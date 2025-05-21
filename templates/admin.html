@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Admin Panel</title>
+    <link rel="stylesheet" href="/static/css/style.css" />
+  </head>
+  <body>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <ul style="color: green;">
+          {% for msg in messages %}
+            <li>{{ msg }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+
+    <h1>Admin Dashboard</h1>
+
+    <h2>User List</h2>
+    <table border="1">
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Role</th>
+          <th>Last Login</th>
+          <th>Reset Password</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+        <tr>
+          <td>{{ user.username }}</td>
+          <td>{{ user.role }}</td>
+          <td>{{ user.last_login or 'Never' }}</td>
+          <td>
+            <form method="POST" action="/admin/reset_password/{{ user.id }}">
+              <input type="password" name="new_password" placeholder="New password" required />
+              <button type="submit">Reset</button>
+            </form>
+          </td>
+          <td>
+            <form method="POST" action="/admin/delete_user/{{ user.id }}" style="display:inline;">
+              <button type="submit" onclick="return confirm('Are you sure?')">Delete</button>
+            </form>
+
+            <form method="POST" action="/admin/toggle_role/{{ user.id }}" style="display:inline;">
+              <button type="submit">Make {{ 'Admin' if user.role == 'user' else 'User' }}</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <h2>Create New User</h2>
+    <form method="POST" action="/admin/create_user">
+      <label>Username:</label><br />
+      <input type="text" name="username" required /><br />
+
+      <label>Password:</label><br />
+      <input type="password" name="password" required /><br />
+
+      <label>Role:</label><br />
+      <select name="role" required>
+        <option value="user">User</option>
+        <option value="admin">Admin</option>
+      </select><br /><br />
+
+      <button type="submit">Create User</button>
+    </form>
+  </body>
+</html>
+

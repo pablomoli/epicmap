@@ -1,15 +1,22 @@
 const INITIAL_CENTER = [28.5383, -81];
 const INITIAL_ZOOM = 10;
 
-function refreshSidebarJob(jobNumber) {
-  fetch(`/jobs?job_number=${jobNumber}`)
+const AppState = {
+  map: null,
+  markerCluster: null,
+  lastFetchedJobs: [],
+  selectedJobNumber: null,
+  searchMarker: null,
+};
+
+function refreshSidebarJob(job_number) {
+  fetch(`/jobs?job_number=${job_number}`)
     .then((res) => res.json())
     .then((data) => {
       const updatedJob = data[0];
       if (updatedJob) {
-        Object.assign(
-          window.lastFetchedJobs.find((j) => j.JobNumber === jobNumber),
-          updatedJob,
+        AppState.lastFetchedJobs = AppState.lastFetchedJobs.map((j) =>
+          j.job_number === job_number ? updatedJob : j,
         );
         showJobDetails(updatedJob);
       }
@@ -26,6 +33,7 @@ const statusIcons = {
   "Completed/To Be Filed": "green",
   "Ongoing Site Plan": "pink",
 };
+
 function getStatusIcon(status) {
   const color = statusIcons[status] || "blue";
   return new L.Icon({
@@ -38,9 +46,6 @@ function getStatusIcon(status) {
   });
 }
 
-// ==========================
-// 🌐 Base & Overlay Layers
-// ==========================
 const baseMaps = {
   "Esri Satellite": L.tileLayer(
     "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
@@ -61,8 +66,6 @@ const countiesLayer = L.geoJSON(null, {
 });
 
 const countyLabelsLayer = L.layerGroup();
-window.lastFetchedJobs = [];
-let selectedJobNumber = null;
 
 fetch("/static/data/florida_counties.geojson")
   .then((res) => res.json())
@@ -88,7 +91,7 @@ fetch("/static/data/florida_counties.geojson")
   })
   .catch((err) => console.error("County load failed:", err));
 
-let map = L.map("map", {
+AppState.map = L.map("map", {
   center: INITIAL_CENTER,
   zoom: INITIAL_ZOOM,
   layers: [baseMaps["Esri Satellite"]],
@@ -98,26 +101,26 @@ L.control
   .layers(baseMaps, {
     "Florida Counties": L.layerGroup([countiesLayer, countyLabelsLayer]),
   })
-  .addTo(map);
+  .addTo(AppState.map);
 
-function editJob(jobNumber) {
-  const job = window.lastFetchedJobs.find((j) => j.JobNumber === jobNumber);
+function editJob(job_number) {
+  const job = AppState.lastFetchedJobs.find((j) => j.job_number === job_number);
   if (!job) return;
 
   const content = document.getElementById("info-content");
   content.innerHTML = `
     <div id="job-edit-form">
-      <h3>Edit Job #${job.JobNumber}</h3>
+      <h3>Edit Job #${job.job_number}</h3>
       <form id="edit-form">
-        <label>Client: <input name="client" value="${job.Client || ""}" /></label><br />
-        <label>Address: <input name="address" value="${job.Address || ""}" /></label><br />
+        <label>Client: <input name="client" value="${job.client || ""}" /></label><br />
+        <label>Address: <input name="address" value="${job.address || ""}" /></label><br />
         <label>Status:
           <select name="status">
             ${Object.keys(statusIcons)
               .map(
                 (status) =>
                   `<option value="${status}" ${
-                    status === job.Status ? "selected" : ""
+                    status === job.status ? "selected" : ""
                   }>${status}</option>`,
               )
               .join("")}
@@ -136,16 +139,16 @@ function editJob(jobNumber) {
     if (form.client.value.trim()) updated.client = form.client.value.trim();
     if (form.status.value.trim()) updated.status = form.status.value.trim();
 
-    const newAddress = form.address.value.trim();
-    const oldAddress = job.Address || job.address;
+    const newaddress = form.address.value.trim();
+    const oldaddress = job.address || job.address;
 
-    if (newAddress && newAddress !== oldAddress) {
-      updated.address = newAddress;
-      fetch(`/geocode?address=${encodeURIComponent(newAddress)}`)
+    if (newaddress && newaddress !== oldaddress) {
+      updated.address = newaddress;
+      fetch(`/geocode?address=${encodeURIComponent(newaddress)}`)
         .then((res) => res.json())
         .then((geo) => {
           if (!geo.lat || !geo.lon) {
-            alert("Geocoding failed. Address not updated.");
+            alert("Geocoding failed. address not updated.");
             return;
           }
           updated.address = geo.formatted_address;
@@ -163,14 +166,13 @@ function editJob(jobNumber) {
     }
   });
 
-  // ✅ NEW: Cancel just restores the job details view
   document.getElementById("cancel-edit").addEventListener("click", () => {
     showJobDetails(job);
   });
 }
 
 function submitUpdate(updated) {
-  fetch(`/jobs/${selectedJobNumber}`, {
+  fetch(`/jobs/${AppState.selectedJobNumber}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(updated),
@@ -183,34 +185,38 @@ function submitUpdate(updated) {
       }
       alert("Job updated!");
       fetchJobs();
+
       Object.assign(
-        window.lastFetchedJobs.find((j) => j.JobNumber === selectedJobNumber),
+        AppState.lastFetchedJobs.find(
+          (j) => j.job_number === AppState.selectedJobNumber,
+        ),
         data,
       );
+
       showJobDetails(data);
     });
 }
 
 function showJobDetails(job) {
-  selectedJobNumber = job.JobNumber;
-  document.getElementById("visited-count").textContent = job.Visited || 0;
+  AppState.selectedJobNumber = job.job_number;
+  document.getElementById("visited-count").textContent = job.visited || 0;
   document.getElementById("total-time-spent").textContent = Number(
-    job.TotalTimeSpent || 0,
+    job.total_time_spent || 0,
   ).toFixed(2);
 
   const panel = document.getElementById("info-panel");
   const content = document.getElementById("info-content");
 
   content.innerHTML = `
-    <h3>Job #${job.JobNumber}</h3>
-    <p><strong>Client:</strong> ${job.Client}</p>
-    <p><strong>Address:</strong> ${job.Address}</p>
-    <p><strong>Status:</strong> ${job.Status || ""}</p>
-    ${job.County ? `<p><strong>County:</strong> ${job.County}</p>` : ""}
-    ${job.PropertyLink ? `<p><a href="${job.PropertyLink}" target="_blank">View Property Appraiser</a></p>` : ""}
-    <button onclick="editJob('${job.JobNumber}')">Edit Job</button>
+    <h3>Job #${job.job_number}</h3>
+    <p><strong>client:</strong> ${job.client}</p>
+    <p><strong>address:</strong> ${job.address}</p>
+    <p><strong>Status:</strong> ${job.status || ""}</p>
+    ${job.county ? `<p><strong>County:</strong> ${job.county}</p>` : ""}
+    ${job.prop_appr_link ? `<p><a href="${job.prop_appr_link}" target="_blank">View Property Appraiser</a></p>` : ""}
+    <button onclick="editJob('${job.job_number}')">Edit Job</button>
   `;
-  fetch(`/jobs/${job.JobNumber}/fieldwork`)
+  fetch(`/jobs/${job.job_number}/fieldwork`)
     .then((res) => res.json())
     .then((entries) => {
       const list = document.getElementById("fieldwork-list");
@@ -274,7 +280,7 @@ function submitFieldworkEdit(event, id) {
     .then((res) => res.json())
     .then((data) => {
       alert("Field work updated.");
-      refreshSidebarJob(data.job_number);
+      refreshSidebarJob(AppState.selectedJobNumber);
     })
     .catch((err) => {
       console.error("Update failed", err);
@@ -287,79 +293,83 @@ document.getElementById("close-panel").addEventListener("click", () => {
 });
 
 function fetchJobs(params = {}) {
-  if (window.markerCluster) {
-    map.removeLayer(window.markerCluster);
+  if (AppState.markerCluster) {
+    AppState.map.removeLayer(AppState.markerCluster);
   }
 
   const query = new URLSearchParams(params).toString();
-  fetch(`/jobs?${query}`)
+  return fetch(`/jobs?${query}`)
     .then((res) => res.json())
     .then((data) => {
-      console.log("Fetched jobs:", data);
-      window.lastFetchedJobs = data;
-      const cluster = L.markerClusterGroup();
-      data.forEach((job) => {
-        if (job.Latitude && job.Longitude) {
-          const marker = L.marker([job.Latitude, job.Longitude], {
-            icon: getStatusIcon(job.Status),
-          });
-          marker.on("click", () => showJobDetails(job));
-          cluster.addLayer(marker);
-        }
-      });
-      window.markerCluster = cluster;
-      map.addLayer(cluster);
+      // console.log("Fetched jobs:", data);
+      AppState.lastFetchedJobs = data;
+      const cluster = renderMarkers(data);
+      AppState.markerCluster = cluster;
+      AppState.map.addLayer(cluster);
     });
 }
 
-document.getElementById("filterForm").addEventListener("submit", function (e) {
+const filterFormHandler = debounce(function (e) {
   e.preventDefault();
   const client = document.getElementById("client").value;
   const job_number = document.getElementById("job_number").value;
   const status = document.getElementById("status").value;
-  console.log({ client, job_number });
+
   fetchJobs({ client, job_number, status });
-});
+}, 300); // 300ms debounce
+
+document
+  .getElementById("filterForm")
+  .addEventListener("submit", filterFormHandler);
 
 function clearFilters() {
   document.getElementById("filterForm").reset();
   fetchJobs();
 }
 
-let searchMarker = null;
-
-document.getElementById("searchForm").addEventListener("submit", function (e) {
+const searchFormHandler = debounce(function (e) {
   e.preventDefault();
-  const address = document.getElementById("search").value;
+  const address = document.getElementById("search").value.trim();
   if (!address) return;
+
+  // Check cache first
+  if (geocodeCache.has(address)) {
+    processGeocodeResult(geocodeCache.get(address));
+    return;
+  }
+
+  showLoading(true);
 
   fetch(`/geocode?address=${encodeURIComponent(address)}`)
     .then((res) => res.json())
     .then((data) => {
-      if (!data.lat || !data.lon) {
-        alert("Address not found.");
+      showLoading(false);
+
+      if (data.error) {
+        alert(data.error);
         return;
       }
 
-      if (searchMarker) map.removeLayer(searchMarker);
-      searchMarker = L.marker([data.lat, data.lon], { draggable: false })
-        .addTo(map)
-        .bindPopup(`<b>Result</b><br>${data.formatted_address}`)
-        .openPopup();
-
-      map.setView([data.lat, data.lon], 18);
+      // Save in cache
+      geocodeCache.set(address, data);
+      processGeocodeResult(data);
     })
     .catch((err) => {
+      showLoading(false);
       console.error("Geocoding error:", err);
-      alert("Error finding address.");
+      alert("Could not geocode address.");
     });
-});
+}, 300); // 300ms debounce delay
+
+document
+  .getElementById("searchForm")
+  .addEventListener("submit", searchFormHandler);
 
 document
   .getElementById("new-fieldwork")
   .addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (!selectedJobNumber) {
+    if (!AppState.selectedJobNumber) {
       alert("Select a job first.");
       return;
     }
@@ -368,7 +378,7 @@ document
     const payload = Object.fromEntries(formData.entries());
 
     try {
-      const res = await fetch(`/jobs/${selectedJobNumber}/fieldwork`, {
+      const res = await fetch(`/jobs/${AppState.selectedJobNumber}/fieldwork`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -381,7 +391,7 @@ document
         alert("Field work added!");
 
         // Refetch the latest job info and show the sidebar again
-        refreshSidebarJob(selectedJobNumber);
+        refreshSidebarJob(AppState.selectedJobNumber);
 
         e.target.reset();
       } else {
@@ -393,7 +403,53 @@ document
     }
   });
 document.getElementById("reset-map").addEventListener("click", () => {
-  map.setView(INITIAL_CENTER, INITIAL_ZOOM);
+  AppState.map.flyTo(INITIAL_CENTER, INITIAL_ZOOM);
 });
+function renderMarkers(jobs) {
+  const cluster = L.markerClusterGroup();
+  jobs.forEach((job) => {
+    if (job.latitude && job.longitude) {
+      const marker = L.marker([job.latitude, job.longitude], {
+        icon: getStatusIcon(job.Status),
+      });
+      marker.on("click", () => showJobDetails(job));
+      cluster.addLayer(marker);
+    }
+  });
+  return cluster;
+}
+async function loadJobsWithMarkers(params = {}) {
+  const data = await fetchJobs(params);
+  renderMarkers(data);
+}
+function debounce(func, delay) {
+  let timeout;
+  return function (...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), delay);
+  };
+}
+const geocodeCache = new Map();
+
+function processGeocodeResult(data) {
+  if (!data.lat || !data.lon) {
+    alert("Address not found.");
+    return;
+  }
+
+  if (AppState.searchMarker) AppState.map.removeLayer(AppState.searchMarker);
+  AppState.searchMarker = L.marker([data.lat, data.lon])
+    .addTo(AppState.map)
+    .bindPopup(`<b>Result</b><br>${data.formatted_address}`)
+    .openPopup();
+
+  AppState.map.setView([data.lat, data.lon], 18);
+}
+
+function showLoading(show) {
+  document.getElementById("loading-indicator").style.display = show
+    ? "block"
+    : "none";
+}
 
 fetchJobs();

@@ -1,27 +1,36 @@
-from flask import Flask, render_template, request, jsonify, redirect
+from flask import Flask, render_template, request, jsonify, redirect, session, redirect
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 import os
 import requests
+from auth_utils import hash_password, check_password, login_required
 
-from models import db, Job, FieldWork, Tag
+from models import db, Job, FieldWork, Tag, User
 from utils import get_county_from_coords, get_brevard_property_link
+
+from admin import admin_bp
 
 # Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
-db_path = os.getenv("DATABASE_URL", "sqlite:///jobs.db")
+db_path = os.getenv("DATABASE_URL")
 app.config['SQLALCHEMY_DATABASE_URI'] = db_path
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+app.secret_key = os.getenv("SESSION_KEY")
+app.permanent_session_lifetime = timedelta(days=30)
+
+app.register_blueprint(admin_bp)
 
 # Initialize extensions
 db.init_app(app)
 migrate = Migrate(app, db)
 
 @app.route("/", methods=["GET", "POST"])
+@login_required
 def form():
     if request.method == "POST":
         job_number = request.form["job_number"].strip()
@@ -76,10 +85,12 @@ def form():
     return render_template("form.html")
 
 @app.route("/map")
+@login_required
 def map_view():
     return render_template("map.html")
 
 @app.route("/jobs")
+@login_required
 def jobs():
     query = Job.query
 
@@ -130,6 +141,7 @@ def geocode():
     })
 
 @app.route("/jobs/<job_number>", methods=["PUT"])
+@login_required
 def update_job(job_number):
     job = Job.query.filter_by(job_number=job_number).first_or_404()
     data = request.json
@@ -150,6 +162,7 @@ def update_job(job_number):
     return jsonify(job.to_dict())
 
 @app.route("/jobs/<job_number>/fieldwork", methods=["POST"])
+@login_required
 def add_fieldwork(job_number):
     job = Job.query.filter_by(job_number=job_number).first()
     if not job:
@@ -170,7 +183,7 @@ def add_fieldwork(job_number):
         return jsonify({"error": f"Invalid or missing data: {e}"}), 400
 
     fieldwork = FieldWork(
-        job_number=job_number,
+        job_id=job.id,
         work_date=work_date,
         start_time=start_time,
         end_time=end_time,
@@ -189,12 +202,14 @@ def add_fieldwork(job_number):
     return jsonify({"message": "Field work added", "total_time": fieldwork.total_time})
 
 @app.route("/jobs/<job_number>/fieldwork", methods=["GET"])
+@login_required
 def get_fieldwork_for_job(job_number):
     job = Job.query.filter_by(job_number=job_number).first_or_404()
-    entries = FieldWork.query.filter_by(job_number=job_number).order_by(FieldWork.work_date.desc()).all()
+    entries = FieldWork.query.filter_by(job_id=job.id).order_by(FieldWork.work_date.desc()).all()
     return jsonify([entry.to_dict() for entry in entries])
 
 @app.route("/fieldwork/<int:entry_id>", methods=["PUT"])
+@login_required
 def update_fieldwork(entry_id):
     fw = FieldWork.query.get_or_404(entry_id)
     data = request.get_json()
@@ -213,14 +228,37 @@ def update_fieldwork(entry_id):
         delta = datetime.combine(datetime.min, fw.end_time) - datetime.combine(datetime.min, fw.start_time)
         fw.total_time = round(delta.total_seconds() / 3600, 2)
 
-    job = Job.query.filter_by(job_number=fw.job_number).first()
-    all_entries = FieldWork.query.filter_by(job_number=fw.job_number).all()
+    job = Job.query.get(fw.job_id)
+    all_entries = FieldWork.query.filter_by(job_id=job.id).all()
     job.total_time_spent = sum(entry.total_time for entry in all_entries)
 
 
     db.session.commit()
     return jsonify(fw.to_dict())
 
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        user = User.query.filter_by(username=username).first()
+
+        if user and check_password(password, user.password):
+            session.permanent = user.role == 'admin'
+            session['user_id'] = user.id
+            session['role'] = user.role
+            user.last_login = datetime.now(tz=timezone.utc)
+            user.last_ip = request.remote_addr
+            db.session.commit()
+            return redirect('/')
+        return render_template('login.html', error="Invalid credentials")
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect('/login')
 
 
 if __name__ == "__main__":
