@@ -17,26 +17,28 @@ load_dotenv()
 
 app = Flask(__name__)
 db_path = os.getenv("DATABASE_URL")
-app.config['SQLALCHEMY_DATABASE_URI'] = db_path
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config["SQLALCHEMY_DATABASE_URI"] = db_path
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 app.secret_key = os.getenv("SESSION_KEY")
 app.permanent_session_lifetime = timedelta(days=30)
 
-app.register_blueprint(admin_bp)
+app.register_blueprint(admin_bp, url_prefix="/admin")
 
 # Initialize extensions
 db.init_app(app)
 migrate = Migrate(app, db)
 
+
 @app.route("/", methods=["GET", "POST"])
 @login_required
-def form():
+def map_with_jobs():
+    # Handle job creation (POST)
     if request.method == "POST":
         job_number = request.form["job_number"].strip()
         existing = Job.query.filter_by(job_number=job_number).first()
         if existing:
-            return render_template("form.html", error="Job number already exists.")
+            return jsonify({"error": "Job number already exists."}), 400
 
         raw_address = request.form["address"]
         client = request.form["client"]
@@ -62,8 +64,16 @@ def form():
             except Exception as e:
                 print("Geocoding failed:", e)
 
-        county = get_county_from_coords(latitude, longitude) if latitude and longitude else None
-        property_link = get_brevard_property_link(formatted_address) if county and county.upper() == "BREVARD" else None
+        county = (
+            get_county_from_coords(latitude, longitude)
+            if latitude and longitude
+            else None
+        )
+        property_link = (
+            get_brevard_property_link(formatted_address)
+            if county and county.upper() == "BREVARD"
+            else None
+        )
 
         new_job = Job(
             job_number=job_number,
@@ -77,17 +87,21 @@ def form():
             created_at=datetime.now(tz=timezone.utc),
             visited=0,
             total_time_spent=0.0,
-            tags=[]
+            tags=[],
         )
         db.session.add(new_job)
         db.session.commit()
-        return redirect("/")
-    return render_template("form.html")
 
-@app.route("/map")
-@login_required
-def map_view():
+        return jsonify(
+            {
+                "success": True,
+                "message": "Job created successfully",
+                "job": new_job.to_dict(),
+            }
+        )
+
     return render_template("map.html")
+
 
 @app.route("/jobs")
 @login_required
@@ -107,6 +121,7 @@ def jobs():
 
     jobs = query.all()
     return jsonify([job.to_dict() for job in jobs])
+
 
 # Utility route for geocoding
 @app.route("/geocode")
@@ -133,12 +148,15 @@ def geocode():
     lon = location["lng"]
     county = get_county_from_coords(lat, lon)
 
-    return jsonify({
-        "lat": lat,
-        "lon": lon,
-        "county": county,
-        "formatted_address": result["formatted_address"]
-    })
+    return jsonify(
+        {
+            "lat": lat,
+            "lon": lon,
+            "county": county,
+            "formatted_address": result["formatted_address"],
+        }
+    )
+
 
 @app.route("/jobs/<job_number>", methods=["PUT"])
 @login_required
@@ -161,6 +179,7 @@ def update_job(job_number):
     db.session.commit()
     return jsonify(job.to_dict())
 
+
 @app.route("/jobs/<job_number>/fieldwork", methods=["POST"])
 @login_required
 def add_fieldwork(job_number):
@@ -174,7 +193,9 @@ def add_fieldwork(job_number):
         work_date = datetime.strptime(data["work_date"], "%Y-%m-%d").date()
         start_time = datetime.strptime(data["start_time"], "%H:%M").time()
         end_time = datetime.strptime(data["end_time"], "%H:%M").time()
-        delta = datetime.combine(datetime.min, end_time) - datetime.combine(datetime.min, start_time)
+        delta = datetime.combine(datetime.min, end_time) - datetime.combine(
+            datetime.min, start_time
+        )
         total_time = round(delta.total_seconds() / 3600, 2)
 
         crew = data.get("crew")
@@ -189,7 +210,7 @@ def add_fieldwork(job_number):
         end_time=end_time,
         crew=crew,
         drone_card=drone_card,
-        total_time=total_time
+        total_time=total_time,
     )
 
     db.session.add(fieldwork)
@@ -201,12 +222,18 @@ def add_fieldwork(job_number):
 
     return jsonify({"message": "Field work added", "total_time": fieldwork.total_time})
 
+
 @app.route("/jobs/<job_number>/fieldwork", methods=["GET"])
 @login_required
 def get_fieldwork_for_job(job_number):
     job = Job.query.filter_by(job_number=job_number).first_or_404()
-    entries = FieldWork.query.filter_by(job_id=job.id).order_by(FieldWork.work_date.desc()).all()
+    entries = (
+        FieldWork.query.filter_by(job_id=job.id)
+        .order_by(FieldWork.work_date.desc())
+        .all()
+    )
     return jsonify([entry.to_dict() for entry in entries])
+
 
 @app.route("/fieldwork/<int:entry_id>", methods=["PUT"])
 @login_required
@@ -225,44 +252,45 @@ def update_fieldwork(entry_id):
     if "drone_card" in data:
         fw.drone_card = data["drone_card"]
     if fw.start_time and fw.end_time:
-        delta = datetime.combine(datetime.min, fw.end_time) - datetime.combine(datetime.min, fw.start_time)
+        delta = datetime.combine(datetime.min, fw.end_time) - datetime.combine(
+            datetime.min, fw.start_time
+        )
         fw.total_time = round(delta.total_seconds() / 3600, 2)
 
     job = Job.query.get(fw.job_id)
     all_entries = FieldWork.query.filter_by(job_id=job.id).all()
     job.total_time_spent = sum(entry.total_time for entry in all_entries)
 
-
     db.session.commit()
     return jsonify(fw.to_dict())
 
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route("/login", methods=["GET", "POST"])
 def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
         user = User.query.filter_by(username=username).first()
 
         if user and check_password(password, user.password):
-            session.permanent = user.role == 'admin'
-            session['user_id'] = user.id
-            session['role'] = user.role
+            session.permanent = user.role == "admin"
+            session["user_id"] = user.id
+            session["role"] = user.role
             user.last_login = datetime.now(tz=timezone.utc)
             user.last_ip = request.remote_addr
             db.session.commit()
-            return redirect('/')
-        return render_template('login.html', error="Invalid credentials")
-    return render_template('login.html')
+            return redirect("/")
+        return render_template("login.html", error="Invalid credentials")
+    return render_template("login.html")
 
-@app.route('/logout')
+
+@app.route("/logout")
 def logout():
     session.clear()
-    return redirect('/login')
+    return redirect("/login")
 
 
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-    app.run(debug=False)
-
+    app.run(debug=True)

@@ -2,18 +2,14 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Survey Job Map</title>
+    <title>Epic Map - Survey Job Management</title>
 
-    <!-- Custom Styles -->
+    <!-- Styles -->
     <link rel="stylesheet" href="/static/css/style.css" />
-
-    <!-- Leaflet Core -->
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     />
-
-    <!-- MarkerCluster Styles -->
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
@@ -25,115 +21,514 @@
   </head>
 
   <body>
-    <h1>Epic Map</h1>
-    <div class="top-bar">
-      <!-- Filter Column -->
-      <div class="filter-column">
-        <h3>Filter Existing Jobs</h3>
-        <form id="filterForm">
-          <div class="filter-row">
-            <div>
-              <label for="job_number">Job #:</label>
-              <input type="text" id="job_number" name="job_number" />
-            </div>
+    <header class="spa-header">
+      <h1>Epic Map</h1>
 
-            <div>
-              <label for="client">Client/Buyer:</label>
-              <input type="text" id="client" name="client" />
-            </div>
-          </div>
+      <nav class="spa-nav">
+        <a href="/admin" class="spa-nav-item">Admin Panel</a>
+        <a href="/logout" class="spa-nav-item">Logout</a>
+      </nav>
+    </header>
 
-          <div class="filter-row">
-            <div>
-              <label for="status">Status:</label>
-              <select id="status" name="status">
-                <option value="">-- All --</option>
-                <option value="On Hold/Pending">On Hold/Pending</option>
-                <option value="Needs Fieldwork">Needs Fieldwork</option>
-                <option value="Fieldwork Complete/Needs Office Work">
-                  Fieldwork Complete/Needs Office Work
-                </option>
-                <option value="To Be Printed/Packaged">
-                  To Be Printed/Packaged
-                </option>
-                <option value="Survey Complete/Invoice Sent/Unpaid">
-                  Survey Complete/Invoice Sent/Unpaid
-                </option>
-                <option value="Set/Flag Pins">Set/Flag Pins</option>
-                <option value="Completed/To Be Filed">
-                  Completed/To Be Filed
-                </option>
-                <option value="Ongoing Site Plan">Ongoing Site Plan</option>
-              </select>
+    <div class="spa-form-card no-radius">
+      <div class="controls-grid">
+        <div>
+          <h3 class="section-heading">Filter Existing Jobs</h3>
+          <form id="filterForm" class="spa-form">
+            <div
+              style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem"
+            >
+              <input
+                type="text"
+                id="job_number"
+                name="job_number"
+                placeholder="Job #"
+                class="spa-input"
+              />
+              <input
+                type="text"
+                id="client"
+                name="client"
+                placeholder="Client/Buyer"
+                class="spa-input"
+              />
             </div>
+            <select
+              id="status"
+              name="status"
+              class="spa-input"
+              style="margin-top: 1rem"
+            >
+              <option value="">-- All Statuses --</option>
+              <option value="On Hold/Pending">On Hold/Pending</option>
+              <option value="Needs Fieldwork">Needs Fieldwork</option>
+              <option value="Fieldwork Complete/Needs Office Work">
+                Fieldwork Complete/Needs Office Work
+              </option>
+              <option value="To Be Printed/Packaged">
+                To Be Printed/Packaged
+              </option>
+              <option value="Survey Complete/Invoice Sent/Unpaid">
+                Survey Complete/Invoice Sent/Unpaid
+              </option>
+              <option value="Set/Flag Pins">Set/Flag Pins</option>
+              <option value="Completed/To Be Filed">
+                Completed/To Be Filed
+              </option>
+              <option value="Ongoing Site Plan">Ongoing Site Plan</option>
+            </select>
+            <div style="display: flex; gap: 10px; margin-top: 1rem">
+              <button type="submit" class="spa-btn spa-btn-primary">
+                Apply Filters
+              </button>
+              <button
+                type="button"
+                onclick="clearFilters()"
+                class="spa-btn spa-btn-secondary"
+              >
+                Reset
+              </button>
+            </div>
+          </form>
+        </div>
 
-            <div>
-              <button type="submit">Apply Filters</button>
-              <button type="button" onclick="clearFilters()">Reset</button>
+        <!-- Search & Create Section -->
+        <div>
+          <h3 class="section-heading">Search Address</h3>
+          <form id="searchForm" class="spa-form">
+            <div style="display: flex; gap: 10px">
+              <input
+                type="text"
+                id="search"
+                placeholder="123 Main St, Orlando FL"
+                class="spa-input"
+                style="flex: 1"
+              />
+              <button type="submit" class="spa-btn spa-btn-primary">
+                Search
+              </button>
             </div>
-          </div>
-        </form>
-      </div>
-      <!-- Search Column -->
-      <div class="search-column">
-        <h3>Scout a Potential Job</h3>
-        <form id="searchForm">
-          <div>
-            <label for="search">Search Address:</label>
-            <input
-              type="text"
-              id="search"
-              placeholder="123 Main St, Orlando FL"
-            />
-            <button type="submit">Go</button>
-          </div>
-        </form>
-        <a class="newjob" href="/">Add New Job</a>
+          </form>
+          <button
+            class="spa-btn spa-btn-success"
+            onclick="openModal('createJobModal')"
+            style="margin-top: 1rem"
+          >
+            Create New Job
+          </button>
+        </div>
       </div>
     </div>
 
-    <!-- Map Layout -->
+    <!-- Main Map Container -->
     <div id="main-container">
-      <div id="info-panel">
-        <button id="close-panel">×</button>
-        <h2>Job Details</h2>
-        <div id="info-content">Click a job marker to view details.</div>
+      <!-- Enhanced Job Details Sidebar using existing styling -->
+      <div
+        id="info-panel"
+        class="spa-form-card"
+        style="
+          width: 320px;
+          height: calc(100vh - 200px);
+          position: fixed;
+          right: -340px;
+          top: 200px;
+          transition: right 0.3s ease;
+          overflow-y: auto;
+          z-index: 200;
+          margin: 0;
+        "
+      >
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+          "
+        >
+          <h2 style="margin: 0; color: #333">Job Details</h2>
+          <button
+            id="close-panel"
+            class="spa-btn spa-btn-small spa-btn-secondary"
+          >
+            ×
+          </button>
+        </div>
+
+        <div id="info-content">
+          <p style="color: #666; text-align: center">
+            Click a job marker to view details.
+          </p>
+        </div>
+
+        <!-- Job Stats using existing metric card concept -->
+        <div
+          style="
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+          "
+        >
+          <div style="text-align: center">
+            <div
+              style="font-size: 1.5rem; font-weight: 600; color: #2196f3"
+              id="visited-count"
+            >
+              0
+            </div>
+            <div style="font-size: 0.9rem; color: #666">Site Visits</div>
+          </div>
+          <div style="text-align: center">
+            <div
+              style="font-size: 1.5rem; font-weight: 600; color: #2196f3"
+              id="total-time-spent"
+            >
+              0.0
+            </div>
+            <div style="font-size: 0.9rem; color: #666">Hours Spent</div>
+          </div>
+        </div>
+
+        <!-- Fieldwork Section -->
         <div id="fieldwork-form">
-          <h4>Add Field Work</h4>
-          <form id="new-fieldwork">
-            <label>Date: <input type="date" name="work_date" required /></label
-            ><br />
-            <label
-              >Start: <input type="time" name="start_time" required /></label
-            ><br />
-            <label>End: <input type="time" name="end_time" required /></label
-            ><br />
-            <label>Crew: <input type="text" name="crew" /></label><br />
-            <label>Drone Card: <input type="text" name="drone_card" /></label
-            ><br />
-            <button type="submit">Save Field Work</button>
-          </form>
-          <h4>Past Field Work</h4>
-          <ul id="fieldwork-list">
-            <em>Loading...</em>
+          <h4 style="margin: 1.5rem 0 0.5rem 0; color: #333">
+            Past Field Work
+          </h4>
+          <ul id="fieldwork-list" style="list-style: none; padding: 0">
+            <li style="color: #666; font-style: italic">Loading...</li>
           </ul>
         </div>
-        <p><strong>Visited:</strong> <span id="visited-count">0</span></p>
-        <p>
-          <strong>Total Time Spent:</strong>
-          <span id="total-time-spent">0.00</span> hrs
-        </p>
       </div>
-      <div id="loading-indicator" style="display: none">Loading...</div>
 
-      <div id="map"></div>
-      <button id="reset-map"></button>
+      <!-- Map -->
+      <div id="map" style="height: calc(100vh - 200px)"></div>
+
+      <!-- Enhanced Reset Button -->
+      <button
+        id="reset-map"
+        class="spa-btn spa-btn-primary"
+        style="
+          position: absolute;
+          bottom: 80px;
+          right: 20px;
+          width: 44px;
+          height: 44px;
+          border-radius: 50%;
+          padding: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 100;
+        "
+      ></button>
     </div>
 
-    <!-- Scripts: Proper Order -->
+    <!-- Reuse existing modal styling for all modals -->
+    <div id="createJobModal" class="spa-modal">
+      <div class="spa-modal-content">
+        <span class="spa-close" onclick="closeModal('createJobModal')"
+          >&times;</span
+        >
+        <h2>Create New Job</h2>
+        <form id="createJobForm" class="spa-form">
+          <input
+            type="text"
+            name="job_number"
+            placeholder="Job Number"
+            required
+            class="spa-input"
+          />
+          <input
+            type="text"
+            name="client"
+            placeholder="Client"
+            required
+            class="spa-input"
+          />
+          <input
+            type="text"
+            name="address"
+            id="job-address"
+            placeholder="Address"
+            required
+            class="spa-input"
+          />
+          <div id="address-suggestions" style="display: none"></div>
+          <select name="status" class="spa-input">
+            <option value="">-- Select Status --</option>
+            <option value="On Hold/Pending">On Hold/Pending</option>
+            <option value="Needs Fieldwork">Needs Fieldwork</option>
+            <option value="Fieldwork Complete/Needs Office Work">
+              Fieldwork Complete/Needs Office Work
+            </option>
+            <option value="To Be Printed/Packaged">
+              To Be Printed/Packaged
+            </option>
+            <option value="Survey Complete/Invoice Sent/Unpaid">
+              Survey Complete/Invoice Sent/Unpaid
+            </option>
+            <option value="Set/Flag Pins">Set/Flag Pins</option>
+            <option value="Completed/To Be Filed">Completed/To Be Filed</option>
+            <option value="Ongoing Site Plan">Ongoing Site Plan</option>
+          </select>
+          <div style="display: flex; gap: 10px; margin-top: 20px">
+            <button type="submit" class="spa-btn spa-btn-success">
+              Create Job
+            </button>
+            <button
+              type="button"
+              onclick="closeModal('createJobModal')"
+              class="spa-btn spa-btn-secondary"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="editJobModal" class="spa-modal">
+      <div class="spa-modal-content">
+        <span class="spa-close" onclick="closeModal('editJobModal')"
+          >&times;</span
+        >
+        <h2>Edit Job</h2>
+        <form id="editJobForm" class="spa-form">
+          <input
+            type="text"
+            id="edit-job-number"
+            name="job_number"
+            placeholder="Job Number"
+            readonly
+            class="spa-input"
+          />
+          <input
+            type="text"
+            id="edit-client"
+            name="client"
+            placeholder="Client"
+            required
+            class="spa-input"
+          />
+          <input
+            type="text"
+            id="edit-address"
+            name="address"
+            placeholder="Address"
+            required
+            class="spa-input"
+          />
+          <input
+            type="text"
+            id="edit-county"
+            name="county"
+            placeholder="County"
+            class="spa-input"
+          />
+          <select id="edit-status" name="status" class="spa-input">
+            <option value="">-- Select Status --</option>
+            <option value="On Hold/Pending">On Hold/Pending</option>
+            <option value="Needs Fieldwork">Needs Fieldwork</option>
+            <option value="Fieldwork Complete/Needs Office Work">
+              Fieldwork Complete/Needs Office Work
+            </option>
+            <option value="To Be Printed/Packaged">
+              To Be Printed/Packaged
+            </option>
+            <option value="Survey Complete/Invoice Sent/Unpaid">
+              Survey Complete/Invoice Sent/Unpaid
+            </option>
+            <option value="Set/Flag Pins">Set/Flag Pins</option>
+            <option value="Completed/To Be Filed">Completed/To Be Filed</option>
+            <option value="Ongoing Site Plan">Ongoing Site Plan</option>
+          </select>
+          <textarea
+            id="edit-notes"
+            name="notes"
+            placeholder="Notes"
+            rows="3"
+            class="spa-input"
+          ></textarea>
+          <input
+            type="url"
+            id="edit-prop-appr-link"
+            name="prop_appr_link"
+            placeholder="Property Appraiser Link"
+            class="spa-input"
+          />
+          <input
+            type="url"
+            id="edit-plat-link"
+            name="plat_link"
+            placeholder="Plat Link"
+            class="spa-input"
+          />
+          <input
+            type="url"
+            id="edit-fema-link"
+            name="fema_link"
+            placeholder="FEMA Link"
+            class="spa-input"
+          />
+          <input
+            type="url"
+            id="edit-document-url"
+            name="document_url"
+            placeholder="Document URL"
+            class="spa-input"
+          />
+          <div style="display: flex; gap: 10px; margin-top: 20px">
+            <button type="submit" class="spa-btn spa-btn-primary">
+              Update Job
+            </button>
+            <button
+              type="button"
+              onclick="closeModal('editJobModal')"
+              class="spa-btn spa-btn-secondary"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="addFieldworkModal" class="spa-modal">
+      <div class="spa-modal-content">
+        <span class="spa-close" onclick="closeModal('addFieldworkModal')"
+          >&times;</span
+        >
+        <h2>Add Field Work</h2>
+        <form id="addFieldworkForm" class="spa-form">
+          <input type="date" name="work_date" required class="spa-input" />
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
+            <input type="time" name="start_time" required class="spa-input" />
+            <input type="time" name="end_time" required class="spa-input" />
+          </div>
+          <input type="text" name="crew" placeholder="Crew" class="spa-input" />
+          <input
+            type="text"
+            name="drone_card"
+            placeholder="Drone Card"
+            class="spa-input"
+          />
+          <div style="display: flex; gap: 10px; margin-top: 20px">
+            <button type="submit" class="spa-btn spa-btn-success">
+              Add Field Work
+            </button>
+            <button
+              type="button"
+              onclick="closeModal('addFieldworkModal')"
+              class="spa-btn spa-btn-secondary"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="editFieldworkModal" class="spa-modal">
+      <div class="spa-modal-content">
+        <span class="spa-close" onclick="closeModal('editFieldworkModal')"
+          >&times;</span
+        >
+        <h2>Edit Field Work</h2>
+        <form id="editFieldworkForm" class="spa-form">
+          <input type="hidden" id="edit-fieldwork-id" />
+          <input
+            type="date"
+            id="edit-work-date"
+            name="work_date"
+            required
+            class="spa-input"
+          />
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
+            <input
+              type="time"
+              id="edit-start-time"
+              name="start_time"
+              required
+              class="spa-input"
+            />
+            <input
+              type="time"
+              id="edit-end-time"
+              name="end_time"
+              required
+              class="spa-input"
+            />
+          </div>
+          <input
+            type="text"
+            id="edit-crew"
+            name="crew"
+            placeholder="Crew"
+            class="spa-input"
+          />
+          <input
+            type="text"
+            id="edit-drone-card"
+            name="drone_card"
+            placeholder="Drone Card"
+            class="spa-input"
+          />
+          <div style="display: flex; gap: 10px; margin-top: 20px">
+            <button type="submit" class="spa-btn spa-btn-primary">
+              Update Field Work
+            </button>
+            <button
+              type="button"
+              onclick="closeModal('editFieldworkModal')"
+              class="spa-btn spa-btn-secondary"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Enhanced loading indicator using existing styles -->
+    <div id="loading-indicator" class="loading-overlay">
+      <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
     <script src="/static/js/map.js"></script>
+
+    <style>
+      /* Add this to handle the top control panel specifically */
+      .map-controls {
+        background: white;
+        padding: 1.5rem 2rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border-bottom: 1px solid #e0e0e0;
+        margin: 0; /* Remove margin */
+        border-radius: 0; /* Remove border radius for full width */
+      }
+      /* Small additions to make sidebar work with existing classes */
+      #info-panel.visible {
+        right: 20px !important;
+      }
+
+      /* Ensure modals use spa-modal classes instead of old modal */
+      .modal {
+        display: none;
+      }
+      .spa-modal {
+        display: none;
+      }
+      .spa-modal.show {
+        display: block;
+      }
+    </style>
   </body>
 </html>

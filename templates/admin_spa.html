@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Admin Dashboard - Epic Surveying</title>
+    <link rel="stylesheet" href="/static/css/style.css" />
+    <style></style>
+  </head>
+  <body>
+    <div class="spa-container">
+      <!-- Header with Navigation -->
+      <header class="spa-header">
+        <div>
+          <h1>Admin Dashboard</h1>
+        </div>
+
+        <nav class="spa-nav">
+          <a href="/map" class="spa-nav-item">Map</a>
+          <a
+            href="#dashboard"
+            class="spa-nav-item active"
+            data-section="dashboard"
+          >
+            Dashboard
+          </a>
+          <a href="#jobs" class="spa-nav-item" data-section="jobs"> Jobs </a>
+          <a href="#users" class="spa-nav-item" data-section="users">Users </a>
+        </nav>
+      </header>
+
+      <!-- Flash Messages -->
+      <div id="flash-messages" class="flash-messages"></div>
+
+      <!-- Main Content Area -->
+      <main class="spa-content">
+        <!-- Dashboard Section -->
+        <section id="dashboard-section" class="content-section active">
+          <h2>Loading Dashboard...</h2>
+          <div id="dashboard-content">
+            <!-- Dashboard content will be loaded here -->
+          </div>
+        </section>
+
+        <!-- Jobs Section -->
+        <section id="jobs-section" class="content-section">
+          <h2>Job Management</h2>
+          <div id="jobs-content">
+            <!-- Jobs content will be loaded here -->
+          </div>
+        </section>
+
+        <!-- Users Section -->
+        <section id="users-section" class="content-section">
+          <h2>User Management</h2>
+          <div id="users-content">
+            <!-- Users content will be loaded here -->
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+      <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Include the SPA JavaScript -->
+    <script src="/static/js/admin_spa.js"></script>
+  </body>
+</html>
