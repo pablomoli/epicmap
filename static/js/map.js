@@ -20,13 +20,14 @@ const geocodeCache = new Map();
 // Company Color System - Epic Surveying & Mapping, LLC
 const EPIC_COLORS = {
   "On Hold/Pending": "#C0C0C0",
-  "Needs Fieldwork": "#FFD700",
+  "Needs Fieldwork": "#FFA500",
   "Fieldwork Complete/Needs Office Work": "#8A2BE2",
   "To Be Printed/Packaged": "#1E90FF",
   "Survey Complete/Invoice Sent/Unpaid": "#FFFF00",
   "Set/Flag Pins": "#FF0000",
   "Completed/To Be Filed": "#9ACD32",
   "Ongoing Site Plan": "#FF69B4",
+  "Estimate/Quote Available": "#607080",
 };
 
 // Status Icons Mapping (used for dropdown options)
@@ -39,6 +40,7 @@ const statusIcons = {
   "Set/Flag Pins": "red",
   "Completed/To Be Filed": "green",
   "Ongoing Site Plan": "pink",
+  "Estimate/Quote Available": "gray",
 };
 
 // Utility Functions

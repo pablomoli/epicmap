@@ -6,7 +6,7 @@ from pathlib import Path
 from app import app
 
 # 2) path to your spreadsheet
-EXCEL_PATH = Path(__file__).parent / "invoices_valid.xlsx"
+EXCEL_PATH = Path(__file__).parent / "invoices_valid_addresses.xlsx"
 
 # 3) admin credentials
 ADMIN_USER = "pablo"
@@ -36,7 +36,7 @@ def main():
                 "job_number": str(row["Num"]),
                 "client": row["Client"],
                 "address": row["Address"],
-                "status": "Invoiced",
+                "status": "Estimate/Quote Available",
             }
             resp = client.post("/admin/api/jobs", json=payload)
             if resp.status_code in (200, 201):
